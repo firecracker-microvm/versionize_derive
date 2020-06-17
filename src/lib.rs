@@ -19,6 +19,7 @@ use common::Descriptor;
 use descriptors::{
     enum_desc::EnumDescriptor, struct_desc::StructDescriptor, union_desc::UnionDescriptor,
 };
+use helpers::latest_version_check;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
@@ -50,16 +51,18 @@ pub fn impl_versionize(input: TokenStream) -> proc_macro::TokenStream {
     let version = descriptor.version();
     let versioned_serializer = descriptor.generate_serializer();
     let deserializer = descriptor.generate_deserializer();
-    let serializer = quote! {
-        // Get the struct version for the input app_version.
-        let version = version_map.get_type_version(app_version, <Self as Versionize>::type_id());
+
+    let mut serializer = proc_macro2::TokenStream::new();
+    serializer.extend(latest_version_check(version));
+    serializer.extend(quote! {
         // We will use this copy to perform semantic serialization.
         let mut copy_of_self = self.clone();
         match version {
             #versioned_serializer
             _ => panic!("Unknown {:?} version {}.", &<Self as Versionize>::type_id(), version)
         }
-    };
+    });
+
     (quote! {
         impl Versionize for #ident #generics {
             fn serialize<W: std::io::Write>(&self, writer: &mut W, version_map: &VersionMap, app_version: u16) -> VersionizeResult<()> {

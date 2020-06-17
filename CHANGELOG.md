@@ -1,3 +1,9 @@
+# v0.1.2
+
+- Added a safety check for enforcing that the VersionMaps provided for
+  (de)serialization are up-to-date with the latest versions of the
+  structs/enums/unions.
+
 # v0.1.1
 
 - Removed "versionize" dependency.

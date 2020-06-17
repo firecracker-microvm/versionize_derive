@@ -3,7 +3,7 @@
 
 use super::{ATTRIBUTE_NAME, END_VERSION, START_VERSION};
 use common::Exists;
-use quote::format_ident;
+use quote::{format_ident, quote};
 use std::cmp::max;
 use std::collections::hash_map::HashMap;
 
@@ -76,6 +76,18 @@ pub fn is_array(ty: &syn::Type) -> bool {
     match ty {
         syn::Type::Array(_) => true,
         _ => false,
+    }
+}
+
+// Enforce that the latest VersionMap version is up-to-date with the latest
+// struct/enum/union version.
+pub(crate) fn latest_version_check(current_version: u16) -> proc_macro2::TokenStream {
+    quote! {
+        // Get the struct version for the input app_version.
+        let version = version_map.get_type_version(app_version, <Self as Versionize>::type_id());
+        if app_version == version_map.latest_version() && version != #current_version {
+            return Err(VersionizeError::VersionMapNotUpdated);
+        }
     }
 }
 
