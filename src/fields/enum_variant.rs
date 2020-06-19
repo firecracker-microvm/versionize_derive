@@ -63,7 +63,7 @@ impl EnumVariant {
         if !self.exists_at(target_version) {
             if let Some(default_fn_ident) = get_ident_attr(&self.attrs, DEFAULT_FN) {
                 return quote! {
-                    Self::#field_ident(_) => {
+                    Self::#field_ident(..) => {
                         // Call user defined fn to provide a variant that exists in target version.
                         let new_variant = self.#default_fn_ident(version)?;
                         // The new_variant will serialize it's index and data.
