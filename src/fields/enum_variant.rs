@@ -62,14 +62,16 @@ impl EnumVariant {
 
         if !self.exists_at(target_version) {
             if let Some(default_fn_ident) = get_ident_attr(&self.attrs, DEFAULT_FN) {
-                return quote! {
-                    Self::#field_ident(..) => {
-                        // Call user defined fn to provide a variant that exists in target version.
-                        let new_variant = self.#default_fn_ident(version)?;
-                        // The new_variant will serialize it's index and data.
-                        new_variant.serialize(writer, version_map, app_version)?;
-                    },
+                let field_type_ident = if self.ty.is_empty() {
+                    quote! { Self::#field_ident => }
+                } else {
+                    quote! { Self::#field_ident(..) => }
                 };
+
+                let mut serializer = proc_macro2::TokenStream::new();
+                serializer.extend(field_type_ident);
+                serializer.extend(self.default_fn_serializer(default_fn_ident));
+                return serializer;
             } else {
                 panic!("Variant {} does not exist in version {}, please implement a default_fn function that provides a default value for this variant.", field_ident.to_string(), target_version);
             }
@@ -135,5 +137,16 @@ impl EnumVariant {
                 return Ok(Self::#ident(#data_tuple));
             },
         };
+    }
+
+    fn default_fn_serializer(&self, default_fn_ident: syn::Ident) -> proc_macro2::TokenStream {
+        quote! {
+            {
+                // Call user defined fn to provide a variant that exists in target version.
+                let new_variant = self.#default_fn_ident(version)?;
+                // The new_variant will serialize its index and data.
+                new_variant.serialize(writer, version_map, app_version)?;
+            },
+        }
     }
 }
