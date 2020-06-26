@@ -3,7 +3,7 @@
 
 use common::{Descriptor, Exists, FieldType, GenericDescriptor};
 use fields::union_field::*;
-use helpers::compute_version;
+use helpers::{compute_version, latest_version_check};
 use quote::quote;
 
 pub(crate) type UnionDescriptor = GenericDescriptor<UnionField>;
@@ -40,13 +40,16 @@ impl Descriptor for UnionDescriptor {
             });
         }
 
-        quote! {
-            let version = version_map.get_type_version(app_version, Self::type_id());
+        let mut deserializer = proc_macro2::TokenStream::new();
+        deserializer.extend(latest_version_check(self.version()));
+        deserializer.extend(quote! {
             match version {
                 #versioned_deserializers
-                _ => panic!("Unknown {:?} version {}.", Self::type_id(), version)
+                _ => panic!("Unknown {:?} version {}.", <Self as Versionize>::type_id(), version)
             }
-        }
+        });
+
+        deserializer
     }
 
     fn version(&self) -> u16 {

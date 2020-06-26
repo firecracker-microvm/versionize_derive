@@ -3,7 +3,7 @@
 
 use common::{Descriptor, GenericDescriptor};
 use fields::struct_field::*;
-use helpers::compute_version;
+use helpers::{compute_version, latest_version_check};
 use quote::{format_ident, quote};
 
 pub(crate) type StructDescriptor = GenericDescriptor<StructField>;
@@ -71,13 +71,16 @@ impl Descriptor for StructDescriptor {
 
         // Generate code to map the app version to struct version and wrap the
         // deserializers with the `version` match.
-        quote! {
-            let version = version_map.get_type_version(app_version, <Self as Versionize>::type_id());
+        let mut deserializer = proc_macro2::TokenStream::new();
+        deserializer.extend(latest_version_check(self.version()));
+        deserializer.extend(quote! {
             match version {
                 #versioned_deserializers
                 _ => panic!("Unknown {:?} version {}.", <Self as Versionize>::type_id(), version)
             }
-        }
+        });
+
+        deserializer
     }
 
     fn version(&self) -> u16 {
