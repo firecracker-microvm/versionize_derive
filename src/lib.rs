@@ -44,7 +44,11 @@ pub fn impl_versionize(input: TokenStream) -> proc_macro::TokenStream {
             Box::new(StructDescriptor::new(&data_struct, ident.clone()))
         }
         syn::Data::Enum(data_enum) => Box::new(EnumDescriptor::new(&data_enum, ident.clone())),
-        syn::Data::Union(data_union) => Box::new(UnionDescriptor::new(&data_union, ident.clone())),
+        syn::Data::Union(data_union) => Box::new(UnionDescriptor::new(
+            &data_union,
+            input.attrs,
+            ident.clone(),
+        )),
     };
 
     let version = descriptor.version();

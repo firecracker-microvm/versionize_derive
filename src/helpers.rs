@@ -40,14 +40,15 @@ pub(crate) fn get_end_version(attrs: &HashMap<String, syn::Lit>) -> Option<u16> 
     None
 }
 
-// Returns an attribute hash_map constructed by processing a vector of syn::Attribute.
-pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<String, syn::Lit> {
-    let mut attrs = HashMap::new();
-
-    for nested_attr in attributes
+// Transform input attributes to a vec of NestedMeta.
+pub(crate) fn scan_attributes(
+    attribute_name: &str,
+    attributes: &[syn::Attribute],
+) -> Vec<syn::NestedMeta> {
+    attributes
         .iter()
         .flat_map(|attr| -> Result<Vec<syn::NestedMeta>, ()> {
-            if !attr.path.is_ident(ATTRIBUTE_NAME) {
+            if !attr.path.is_ident(attribute_name) {
                 return Ok(Vec::new());
             }
 
@@ -58,8 +59,15 @@ pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<S
             Ok(Vec::new())
         })
         .flatten()
-    {
-        if let syn::NestedMeta::Meta(nested_meta) = nested_attr {
+        .collect::<Vec<syn::NestedMeta>>()
+}
+
+// Returns an attribute hash_map constructed by processing a vector of syn::Attribute.
+pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<String, syn::Lit> {
+    let mut attrs = HashMap::new();
+
+    for attr in scan_attributes(ATTRIBUTE_NAME, attributes) {
+        if let syn::NestedMeta::Meta(nested_meta) = attr {
             if let syn::Meta::NameValue(attr_name_value) = nested_meta {
                 attrs.insert(
                     attr_name_value.path.get_ident().unwrap().to_string(),
@@ -72,6 +80,20 @@ pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<S
     attrs
 }
 
+// Returns true if union has the repr(C) attribute set.
+pub(crate) fn has_c_layout(attributes: &[syn::Attribute]) -> bool {
+    for attr in scan_attributes("repr", attributes) {
+        if let syn::NestedMeta::Meta(nested_meta) = attr {
+            if let syn::Meta::Path(path_value) = nested_meta {
+                if *path_value.get_ident().unwrap() == "C" {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
 pub fn is_array(ty: &syn::Type) -> bool {
     match ty {
         syn::Type::Array(_) => true,
@@ -89,4 +111,30 @@ where
         version = max(version, max(field.start_version(), field.end_version()));
     }
     version
+}
+
+#[test]
+fn test_union_has_c_layout() {
+    use syn::parse_quote;
+    use syn::DeriveInput;
+
+    let good_union: DeriveInput = parse_quote! {
+        #[repr(C)]
+        #[derive(Versionize)]
+        union TestUnion {
+            a: [u32; 1],
+            b: [u8; 4],
+        }
+    };
+
+    let bad_union: DeriveInput = parse_quote! {
+        #[derive(Versionize)]
+        union TestUnion {
+            a: [u32; 1],
+            b: [u8; 4],
+        }
+    };
+
+    assert_eq!(has_c_layout(&good_union.attrs), true);
+    assert_eq!(has_c_layout(&bad_union.attrs), false);
 }

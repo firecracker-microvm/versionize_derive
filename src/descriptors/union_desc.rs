@@ -3,7 +3,7 @@
 
 use common::{Descriptor, Exists, FieldType, GenericDescriptor};
 use fields::union_field::*;
-use helpers::compute_version;
+use helpers::{compute_version, has_c_layout};
 use quote::quote;
 
 pub(crate) type UnionDescriptor = GenericDescriptor<UnionField>;
@@ -59,12 +59,18 @@ impl Descriptor for UnionDescriptor {
 }
 
 impl UnionDescriptor {
-    pub fn new(input: &syn::DataUnion, ident: syn::Ident) -> Self {
+    pub fn new(input: &syn::DataUnion, attrs: Vec<syn::Attribute>, ident: syn::Ident) -> Self {
         let mut descriptor = UnionDescriptor {
             ty: ident,
             version: 1, // struct start at version 1.
             fields: vec![],
         };
+
+        if !has_c_layout(attrs.as_slice()) {
+            panic!(
+                "Attempting to serialize union with no layout guarantees. Versionize can only work with repr(C) unions."
+            );
+        }
 
         descriptor.parse_union_fields(&input.fields);
         descriptor.version = compute_version(&descriptor.fields);
