@@ -1,3 +1,9 @@
+
+
+## Unreleased
+
+- Union serialization now works only for `repr(C)` unions.
+
 # v0.1.1
 
 - Removed "versionize" dependency.
