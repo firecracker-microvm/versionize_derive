@@ -3,4 +3,3 @@
 
 pub mod enum_desc;
 pub mod struct_desc;
-pub mod union_desc;
