@@ -3,7 +3,7 @@
 #![deny(missing_docs)]
 
 //! Exports the Versionize derive proc macro that generates the Versionize implementation
-//! for structs, enums and unions by using structure annotations.
+//! for structs, and enums by using annotations.
 
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -16,9 +16,7 @@ mod fields;
 mod helpers;
 
 use common::Descriptor;
-use descriptors::{
-    enum_desc::EnumDescriptor, struct_desc::StructDescriptor, union_desc::UnionDescriptor,
-};
+use descriptors::{enum_desc::EnumDescriptor, struct_desc::StructDescriptor};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
@@ -44,7 +42,12 @@ pub fn impl_versionize(input: TokenStream) -> proc_macro::TokenStream {
             Box::new(StructDescriptor::new(&data_struct, ident.clone()))
         }
         syn::Data::Enum(data_enum) => Box::new(EnumDescriptor::new(&data_enum, ident.clone())),
-        syn::Data::Union(data_union) => Box::new(UnionDescriptor::new(&data_union, ident.clone())),
+        syn::Data::Union(_) => {
+            return (quote! {
+                compile_error!("Union serialization is not supported.");
+            })
+            .into()
+        }
     };
 
     let version = descriptor.version();

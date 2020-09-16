@@ -1,3 +1,7 @@
+# v0.1.2
+
+- Removed union serialization support.
+
 # v0.1.1
 
 - Removed "versionize" dependency.

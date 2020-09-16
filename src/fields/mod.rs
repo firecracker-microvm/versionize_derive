@@ -3,4 +3,3 @@
 
 pub mod enum_variant;
 pub mod struct_field;
-pub mod union_field;

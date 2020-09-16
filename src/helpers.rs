@@ -72,13 +72,6 @@ pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<S
     attrs
 }
 
-pub fn is_array(ty: &syn::Type) -> bool {
-    match ty {
-        syn::Type::Array(_) => true,
-        _ => false,
-    }
-}
-
 // Compute current struct version by finding the latest field change version.
 pub(crate) fn compute_version<T>(fields: &[T]) -> u16
 where
