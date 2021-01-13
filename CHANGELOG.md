@@ -1,3 +1,11 @@
+# v0.1.4
+
+- Added more documentation and examples.
+
+# v0.1.3
+
+- Updated documentation.
+
 # v0.1.2
 
 - Removed union serialization support.
