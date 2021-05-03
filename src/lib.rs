@@ -33,8 +33,9 @@ mod helpers;
 use common::Descriptor;
 use descriptors::{enum_desc::EnumDescriptor, struct_desc::StructDescriptor};
 use proc_macro::TokenStream;
+use proc_macro2::TokenTree;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse::ParseStream, parse_macro_input, DeriveInput};
 
 pub(crate) const ATTRIBUTE_NAME: &str = "version";
 
@@ -215,10 +216,26 @@ pub fn impl_versionize(input: TokenStream) -> proc_macro::TokenStream {
     let ident = input.ident.clone();
     let generics = input.generics.clone();
 
-    let descriptor: Box<dyn Descriptor> = match &input.data {
-        syn::Data::Struct(data_struct) => {
-            Box::new(StructDescriptor::new(&data_struct, ident.clone()))
+    let mut is_packed = false;
+    for attr in &input.attrs {
+        if attr.path.is_ident("repr") {
+            let _ = attr.parse_args_with(|input: ParseStream| {
+                while let Some(token) = input.parse()? {
+                    if let TokenTree::Ident(ident) = token {
+                        is_packed |= ident == "packed";
+                    }
+                }
+                Ok(())
+            });
         }
+    }
+
+    let descriptor: Box<dyn Descriptor> = match &input.data {
+        syn::Data::Struct(data_struct) => Box::new(StructDescriptor::new(
+            &data_struct,
+            ident.clone(),
+            is_packed,
+        )),
         syn::Data::Enum(data_enum) => Box::new(EnumDescriptor::new(&data_enum, ident.clone())),
         syn::Data::Union(_) => {
             return (quote! {
