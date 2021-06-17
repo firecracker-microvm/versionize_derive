@@ -59,13 +59,11 @@ pub(crate) fn parse_field_attributes(attributes: &[syn::Attribute]) -> HashMap<S
         })
         .flatten()
     {
-        if let syn::NestedMeta::Meta(nested_meta) = nested_attr {
-            if let syn::Meta::NameValue(attr_name_value) = nested_meta {
-                attrs.insert(
-                    attr_name_value.path.get_ident().unwrap().to_string(),
-                    attr_name_value.lit,
-                );
-            }
+        if let syn::NestedMeta::Meta(syn::Meta::NameValue(attr_name_value)) = nested_attr {
+            attrs.insert(
+                attr_name_value.path.get_ident().unwrap().to_string(),
+                attr_name_value.lit,
+            );
         }
     }
 
