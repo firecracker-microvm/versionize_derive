@@ -90,7 +90,7 @@ impl Descriptor for StructDescriptor {
 }
 
 impl StructDescriptor {
-    pub fn new(input: &syn::DataStruct, ident: syn::Ident) -> Self {
+    pub fn new(input: &syn::DataStruct, ident: syn::Ident, packed_struct: bool) -> Self {
         let mut descriptor = StructDescriptor {
             ty: ident,
             version: 1, // struct start at version 1.
@@ -98,17 +98,18 @@ impl StructDescriptor {
         };
 
         // Fills self.fields.
-        descriptor.parse_struct_fields(&input.fields);
+        descriptor.parse_struct_fields(&input.fields, packed_struct);
         descriptor.version = compute_version(&descriptor.fields);
         descriptor
     }
 
-    fn parse_struct_fields(&mut self, fields: &syn::Fields) {
+    fn parse_struct_fields(&mut self, fields: &syn::Fields, packed_struct: bool) {
         match fields {
             syn::Fields::Named(ref named_fields) => {
                 let pairs = named_fields.named.pairs();
                 for field in pairs.into_iter() {
-                    self.fields.push(StructField::new(self.version, field));
+                    self.fields
+                        .push(StructField::new(self.version, field, packed_struct));
                 }
             }
             _ => panic!("Only named fields are supported."),

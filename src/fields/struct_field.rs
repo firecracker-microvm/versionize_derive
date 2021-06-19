@@ -14,6 +14,7 @@ pub(crate) struct StructField {
     start_version: u16,
     end_version: u16,
     attrs: HashMap<String, syn::Lit>,
+    packed_struct: bool,
 }
 
 impl Exists for StructField {
@@ -36,6 +37,7 @@ impl StructField {
     pub fn new(
         base_version: u16,
         ast_field: syn::punctuated::Pair<&syn::Field, &syn::token::Comma>,
+        packed_struct: bool,
     ) -> Self {
         let attrs = parse_field_attributes(&ast_field.value().attrs);
 
@@ -45,6 +47,7 @@ impl StructField {
             start_version: get_start_version(&attrs).unwrap_or(base_version),
             end_version: get_end_version(&attrs).unwrap_or_default(),
             attrs,
+            packed_struct,
         }
     }
 
@@ -87,9 +90,18 @@ impl StructField {
                     Versionize::serialize(element, writer, version_map, app_version)?;
                 }
             },
-            syn::Type::Path(_) => quote! {
-                Versionize::serialize(&copy_of_self.#field_ident, writer, version_map, app_version)?;
-            },
+            syn::Type::Path(_) => {
+                if self.packed_struct {
+                    quote! {
+                        let copy = copy_of_self.#field_ident;
+                        Versionize::serialize(&copy, writer, version_map, app_version)?;
+                    }
+                } else {
+                    quote! {
+                        Versionize::serialize(&copy_of_self.#field_ident, writer, version_map, app_version)?;
+                    }
+                }
+            }
             syn::Type::Reference(_) => quote! {
                 copy_of_self.#field_ident.serialize(writer, version_map, app_version)?;
             },
