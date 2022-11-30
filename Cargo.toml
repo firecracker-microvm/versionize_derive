@@ -9,9 +9,9 @@ repository = "https://github.com/firecracker-microvm/versionize_derive"
 keywords = ["serialization", "version"]
 
 [dependencies]
-proc-macro2 = ">=1.0"
-quote = ">=1.0"
-syn = { version = ">=1.0.13", features=["full", "extra-traits"]}
+proc-macro2 = "1.0.47"
+quote = "1.0.21"
+syn = { version = "1.0.13", features=["full", "extra-traits"]}
 
 [lib]
 proc-macro = true
