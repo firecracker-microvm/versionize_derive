@@ -14,7 +14,7 @@ pub(crate) fn get_ident_attr(
 ) -> Option<syn::Ident> {
     attrs.get(attr_name).map(|default_fn| match default_fn {
         syn::Lit::Str(lit_str) => {
-            return format_ident!("{}", lit_str.value());
+            format_ident!("{}", lit_str.value())
         }
         _ => panic!("default_fn must be the function name as a String."),
     })

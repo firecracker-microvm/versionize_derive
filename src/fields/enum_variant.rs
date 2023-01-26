@@ -31,18 +31,15 @@ impl Exists for EnumVariant {
 impl EnumVariant {
     pub fn new(base_version: u16, ast_variant: &syn::Variant, variant_index: u32) -> Self {
         let attrs = parse_field_attributes(&ast_variant.attrs);
-        let ty;
 
-        match &ast_variant.fields {
-            syn::Fields::Unnamed(fields) => {
-                ty = fields
-                    .unnamed
-                    .iter()
-                    .map(|field| field.ty.clone())
-                    .collect();
-            }
-            _ => ty = Vec::new(),
-        }
+        let ty = match &ast_variant.fields {
+            syn::Fields::Unnamed(fields) => fields
+                .unnamed
+                .iter()
+                .map(|field| field.ty.clone())
+                .collect(),
+            _ => Vec::new(),
+        };
 
         EnumVariant {
             ident: ast_variant.ident.clone(),
@@ -73,7 +70,7 @@ impl EnumVariant {
                 serializer.extend(self.default_fn_serializer(default_fn_ident));
                 return serializer;
             } else {
-                panic!("Variant {} does not exist in version {}, please implement a default_fn function that provides a default value for this variant.", field_ident.to_string(), target_version);
+                panic!("Variant {} does not exist in version {}, please implement a default_fn function that provides a default value for this variant.", field_ident, target_version);
             }
         }
 
@@ -131,12 +128,12 @@ impl EnumVariant {
             );
         }
 
-        return quote! {
+        quote! {
             #variant_index => {
                 #deserialize_data
                 return Ok(Self::#ident(#data_tuple));
             },
-        };
+        }
     }
 
     fn default_fn_serializer(&self, default_fn_ident: syn::Ident) -> proc_macro2::TokenStream {
