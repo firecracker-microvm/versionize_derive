@@ -107,7 +107,7 @@ impl StructDescriptor {
         match fields {
             syn::Fields::Named(ref named_fields) => {
                 let pairs = named_fields.named.pairs();
-                for field in pairs.into_iter() {
+                for field in pairs {
                     self.fields.push(StructField::new(self.version, field));
                 }
             }

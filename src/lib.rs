@@ -19,7 +19,7 @@
 //! - Versionize trait implementations for repr(C) unions must be backed by
 //! extensive testing.
 //! - Semantic serialization and deserialization is available only for structures.
-//!
+
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate quote;
@@ -217,9 +217,9 @@ pub fn impl_versionize(input: TokenStream) -> proc_macro::TokenStream {
 
     let descriptor: Box<dyn Descriptor> = match &input.data {
         syn::Data::Struct(data_struct) => {
-            Box::new(StructDescriptor::new(&data_struct, ident.clone()))
+            Box::new(StructDescriptor::new(data_struct, ident.clone()))
         }
-        syn::Data::Enum(data_enum) => Box::new(EnumDescriptor::new(&data_enum, ident.clone())),
+        syn::Data::Enum(data_enum) => Box::new(EnumDescriptor::new(data_enum, ident.clone())),
         syn::Data::Union(_) => {
             return (quote! {
                 compile_error!("Union serialization is not supported.");
