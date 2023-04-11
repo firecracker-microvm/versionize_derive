@@ -4,7 +4,7 @@ test
 cxkd
 nb xh
 - Ping dependency versions
-- Fix clippy errors and warnings
+- Fix clippy errors and wsdarnings
 - Bump rust-vmm-ci version
 
 # v0.1.4
