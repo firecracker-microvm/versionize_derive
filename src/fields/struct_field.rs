@@ -127,19 +127,7 @@ impl StructField {
                     _ => panic!("Unsupported array type."),
                 }
 
-                match &array.len {
-                    syn::Expr::Lit(expr_lit) => match &expr_lit.lit {
-                        syn::Lit::Int(lit_int) => {
-                            let array_len: usize = lit_int.base10_parse().unwrap();
-                            self.generate_array_deserializer(array_type_token, array_len)
-                        }
-                        _ => panic!("Unsupported array len literal."),
-                    },
-                    syn::Expr::Path(expr_path) => {
-                        self.generate_array_deserializer(array_type_token, &expr_path.path)
-                    }
-                    _ => panic!("Unsupported array len expression."),
-                }
+                self.generate_array_deserializer(array_type_token, &array.len)
             }
             syn::Type::Path(_) => quote! {
                 #field_ident: <#ty as Versionize>::deserialize(&mut reader, version_map, app_version)?,
@@ -151,10 +139,10 @@ impl StructField {
         }
     }
 
-    fn generate_array_deserializer<T: quote::ToTokens>(
+    fn generate_array_deserializer(
         &self,
         array_type_token: syn::TypePath,
-        array_len: T,
+        array_len: &syn::Expr,
     ) -> proc_macro2::TokenStream {
         let field_ident = format_ident!("{}", self.name);
 
