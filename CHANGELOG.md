@@ -1,3 +1,7 @@
+# v0.1.6
+
+- Allow array length definitions to include casts and other expressions
+
 # v0.1.5
 
 - Ping dependency versions
