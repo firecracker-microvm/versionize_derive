@@ -1,35 +1,35 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use super::super::DEFAULT_FN;
+use super::super::{DEFAULT_FN, END_VERSION, START_VERSION};
 use common::Exists;
-use helpers::{get_end_version, get_ident_attr, get_start_version, parse_field_attributes};
+use helpers::{get_ident_attr, get_version, parse_field_attributes};
 use quote::{format_ident, quote};
-use std::collections::hash_map::HashMap;
+use std::collections::HashMap;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub(crate) struct EnumVariant {
     ident: syn::Ident,
     ty: Vec<syn::Type>,
-    start_version: u16,
     // Bincode uses u32 instead of usize also.
     variant_index: u32,
-    end_version: u16,
+    start_version: Vec<semver::Version>,
+    end_version: Vec<semver::Version>,
     attrs: HashMap<String, syn::Lit>,
 }
 
 impl Exists for EnumVariant {
-    fn start_version(&self) -> u16 {
-        self.start_version
+    fn start_version(&self) -> &[semver::Version] {
+        &self.start_version
     }
 
-    fn end_version(&self) -> u16 {
-        self.end_version
+    fn end_version(&self) -> &[semver::Version] {
+        &self.end_version
     }
 }
 
 impl EnumVariant {
-    pub fn new(base_version: u16, ast_variant: &syn::Variant, variant_index: u32) -> Self {
+    pub fn new(ast_variant: &syn::Variant, variant_index: u32) -> Self {
         let attrs = parse_field_attributes(&ast_variant.attrs);
 
         let ty = match &ast_variant.fields {
@@ -45,19 +45,18 @@ impl EnumVariant {
             ident: ast_variant.ident.clone(),
             ty,
             variant_index,
-            // Set base version.
-            start_version: get_start_version(&attrs).unwrap_or(base_version),
-            end_version: get_end_version(&attrs).unwrap_or_default(),
+            start_version: get_version(START_VERSION, &attrs),
+            end_version: get_version(END_VERSION, &attrs),
             attrs,
         }
     }
 
     // Emits code that serializes an enum variant.
-    pub fn generate_serializer(&self, target_version: u16) -> proc_macro2::TokenStream {
+    pub fn generate_serializer(&self, minor: u64, patch: u64) -> proc_macro2::TokenStream {
         let field_ident = &self.ident;
         let variant_index = self.variant_index;
 
-        if !self.exists_at(target_version) {
+        if !self.exists_at(minor, patch) {
             if let Some(default_fn_ident) = get_ident_attr(&self.attrs, DEFAULT_FN) {
                 let field_type_ident = if self.ty.is_empty() {
                     quote! { Self::#field_ident => }
@@ -81,7 +80,7 @@ impl EnumVariant {
             let data_ident = format_ident!("data_{}", index);
             data_tuple.extend(quote!(#data_ident,));
             serialize_data.extend(quote! {
-                Versionize::serialize(#data_ident, writer, version_map, app_version)?;
+                Versionize::serialize(#data_ident, &mut writer, version_map)?;
             });
         }
 
@@ -89,14 +88,14 @@ impl EnumVariant {
             quote! {
                 Self::#field_ident => {
                     let index: u32 = #variant_index;
-                    Versionize::serialize(&index, writer, version_map, app_version)?;
+                    Versionize::serialize(&index, &mut writer, version_map)?;
                 },
             }
         } else {
             quote! {
                 Self::#field_ident(#data_tuple) => {
                     let index: u32 = #variant_index;
-                    Versionize::serialize(&index, writer, version_map, app_version)?;
+                    Versionize::serialize(&index, &mut writer, version_map)?;
                     #serialize_data
                 },
             }
@@ -123,7 +122,7 @@ impl EnumVariant {
             data_tuple.extend(quote!(#data_ident,));
             deserialize_data.extend(
                 quote! {
-                    let #data_ident = <#data_type as Versionize>::deserialize(&mut reader, version_map, app_version)?;
+                    let #data_ident = <#data_type as Versionize>::deserialize(&mut reader, version_map)?;
                 }
             );
         }
@@ -140,9 +139,9 @@ impl EnumVariant {
         quote! {
             {
                 // Call user defined fn to provide a variant that exists in target version.
-                let new_variant = self.#default_fn_ident(version)?;
+                let new_variant = self.#default_fn_ident(current)?;
                 // The new_variant will serialize its index and data.
-                new_variant.serialize(writer, version_map, app_version)?;
+                new_variant.serialize(&mut writer, version_map)?;
             },
         }
     }
